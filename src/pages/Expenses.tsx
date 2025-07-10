@@ -32,17 +32,31 @@ interface SubProject {
   id: string;
   name: string;
   project: {
+    id: string;
     name: string;
   };
+}
+
+interface ProjectAllocation {
+  allocation_id: string;
+  project_id: string;
+  project_name: string;
+  allocated_amount: number;
+  spent_amount: number;
+  available_amount: number;
+  funding_donor: string;
 }
 
 const Expenses = () => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [subProjects, setSubProjects] = useState<SubProject[]>([]);
+  const [projectAllocations, setProjectAllocations] = useState<ProjectAllocation[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedProjectId, setSelectedProjectId] = useState("");
   const [formData, setFormData] = useState({
+    project_allocation_id: "",
     sub_project_id: "",
     description: "",
     amount: "",
@@ -58,7 +72,7 @@ const Expenses = () => {
 
   const fetchData = async () => {
     try {
-      const [expensesResult, subProjectsResult] = await Promise.all([
+      const [expensesResult, subProjectsResult, allocationsResult] = await Promise.all([
         supabase
           .from('expenses')
           .select(`
@@ -66,7 +80,7 @@ const Expenses = () => {
             sub_project:sub_projects(
               id,
               name,
-              project:projects(name)
+              project:projects(id, name)
             )
           `)
           .order('expense_date', { ascending: false }),
@@ -75,16 +89,19 @@ const Expenses = () => {
           .select(`
             id,
             name,
-            project:projects(name)
+            project:projects(id, name)
           `)
-          .order('name')
+          .order('name'),
+        supabase.rpc('get_project_allocations_with_budget')
       ]);
 
       if (expensesResult.error) throw expensesResult.error;
       if (subProjectsResult.error) throw subProjectsResult.error;
+      if (allocationsResult.error) throw allocationsResult.error;
 
       setExpenses(expensesResult.data || []);
       setSubProjects(subProjectsResult.data || []);
+      setProjectAllocations(allocationsResult.data || []);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({
@@ -101,12 +118,34 @@ const Expenses = () => {
     e.preventDefault();
     
     try {
+      // Validate that there's enough budget
+      const selectedAllocation = projectAllocations.find(a => a.allocation_id === formData.project_allocation_id);
+      if (!selectedAllocation) {
+        toast({
+          title: "Error",
+          description: "Please select a valid project allocation",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const expenseAmount = parseFloat(formData.amount);
+      if (expenseAmount > selectedAllocation.available_amount) {
+        toast({
+          title: "Error",
+          description: `Insufficient budget. Available: $${selectedAllocation.available_amount.toLocaleString()}`,
+          variant: "destructive"
+        });
+        return;
+      }
+
       const { error } = await supabase
         .from('expenses')
         .insert([{
+          project_allocation_id: formData.project_allocation_id,
           sub_project_id: formData.sub_project_id,
           description: formData.description,
-          amount: parseFloat(formData.amount),
+          amount: expenseAmount,
           expense_date: formData.expense_date,
           category: formData.category,
           attachment_url: formData.attachment_url || null,
@@ -117,10 +156,11 @@ const Expenses = () => {
 
       toast({
         title: "Success",
-        description: "Expense added successfully"
+        description: "Expense added and budget deducted successfully"
       });
 
       setFormData({
+        project_allocation_id: "",
         sub_project_id: "",
         description: "",
         amount: "",
@@ -128,6 +168,7 @@ const Expenses = () => {
         category: "",
         attachment_url: ""
       });
+      setSelectedProjectId("");
       setIsDialogOpen(false);
       fetchData();
     } catch (error) {
@@ -191,6 +232,28 @@ const Expenses = () => {
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
+                <Label htmlFor="project_allocation_select">Project Budget</Label>
+                <select
+                  id="project_allocation_select"
+                  className="w-full p-2 border rounded-md"
+                  value={formData.project_allocation_id}
+                  onChange={(e) => {
+                    const allocationId = e.target.value;
+                    const allocation = projectAllocations.find(a => a.allocation_id === allocationId);
+                    setFormData({...formData, project_allocation_id: allocationId});
+                    setSelectedProjectId(allocation?.project_id || "");
+                  }}
+                  required
+                >
+                  <option value="">Select project budget</option>
+                  {projectAllocations.filter(a => a.available_amount > 0).map((allocation) => (
+                    <option key={allocation.allocation_id} value={allocation.allocation_id}>
+                      {allocation.project_name} - Available: ${allocation.available_amount.toLocaleString()}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
                 <Label htmlFor="sub_project_select">Sub-Project</Label>
                 <select
                   id="sub_project_select"
@@ -198,11 +261,14 @@ const Expenses = () => {
                   value={formData.sub_project_id}
                   onChange={(e) => setFormData({...formData, sub_project_id: e.target.value})}
                   required
+                  disabled={!selectedProjectId}
                 >
                   <option value="">Select a sub-project</option>
-                  {subProjects.map((subProject) => (
+                  {subProjects
+                    .filter(subProject => subProject.project.id === selectedProjectId)
+                    .map((subProject) => (
                     <option key={subProject.id} value={subProject.id}>
-                      {subProject.project.name} - {subProject.name}
+                      {subProject.name}
                     </option>
                   ))}
                 </select>
@@ -226,6 +292,11 @@ const Expenses = () => {
                   onChange={(e) => setFormData({...formData, amount: e.target.value})}
                   required
                 />
+                {formData.project_allocation_id && (
+                  <p className="text-sm text-muted-foreground">
+                    Available budget: ${projectAllocations.find(a => a.allocation_id === formData.project_allocation_id)?.available_amount.toLocaleString() || '0'}
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="expense_date">Expense Date</Label>

@@ -79,6 +79,7 @@ export type Database = {
           description: string
           expense_date: string
           id: string
+          project_allocation_id: string | null
           sub_project_id: string
           updated_at: string
         }
@@ -91,6 +92,7 @@ export type Database = {
           description: string
           expense_date: string
           id?: string
+          project_allocation_id?: string | null
           sub_project_id: string
           updated_at?: string
         }
@@ -103,10 +105,18 @@ export type Database = {
           description?: string
           expense_date?: string
           id?: string
+          project_allocation_id?: string | null
           sub_project_id?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "expenses_project_allocation_id_fkey"
+            columns: ["project_allocation_id"]
+            isOneToOne: false
+            referencedRelation: "allocations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "expenses_sub_project_id_fkey"
             columns: ["sub_project_id"]
@@ -240,7 +250,22 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_project_allocations_with_budget: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          allocation_id: string
+          project_id: string
+          project_name: string
+          allocated_amount: number
+          spent_amount: number
+          available_amount: number
+          funding_donor: string
+        }[]
+      }
+      get_project_available_budget: {
+        Args: { project_id_param: string }
+        Returns: number
+      }
     }
     Enums: {
       [_ in never]: never
