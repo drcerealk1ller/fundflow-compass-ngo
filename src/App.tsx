@@ -14,6 +14,7 @@ import NotFound from "./pages/NotFound";
 import Navbar from "./components/Navbar";
 import Sidebar from "./components/Sidebar";
 import Dashboard from "./components/Dashboard";
+import { LoadingSpinner } from "./components/LoadingSpinner";
 
 const queryClient = new QueryClient();
 
@@ -43,14 +44,7 @@ const AppContent = () => {
   const { user, loading } = useAuth();
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-2 text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner message="Starting up..." />;
   }
 
   return (
