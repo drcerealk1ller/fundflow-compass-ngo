@@ -30,37 +30,47 @@ const Sidebar = () => {
 
   return (
     <div className={cn(
-      "border-r bg-background transition-all duration-300",
+      "border-r bg-gradient-to-b from-card to-card/80 backdrop-blur-sm transition-all duration-300 shadow-lg",
       collapsed ? "w-14" : "w-64"
     )}>
-      <div className="flex items-center justify-between p-4">
+      <div className="flex items-center justify-between p-4 border-b bg-gradient-to-r from-primary/10 to-accent/10">
         {!collapsed && (
-          <h2 className="text-lg font-semibold">Menu</h2>
+          <h2 className="text-lg font-semibold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            Menu
+          </h2>
         )}
         <Button
           variant="ghost"
           size="sm"
           onClick={() => setCollapsed(!collapsed)}
+          className="hover:bg-primary/10 hover:text-primary"
         >
           {collapsed ? <Menu className="h-4 w-4" /> : <X className="h-4 w-4" />}
         </Button>
       </div>
 
-      <nav className="space-y-1 p-2">
+      <nav className="space-y-2 p-4">
         {sidebarItems.map((item) => (
           <NavLink
             key={item.title}
             to={item.url}
             className={cn(
-              "flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+              "flex items-center rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 group relative overflow-hidden",
               isActive(item.url)
-                ? "bg-secondary text-secondary-foreground"
-                : "text-muted-foreground hover:bg-secondary/50 hover:text-secondary-foreground"
+                ? "bg-gradient-to-r from-primary to-accent text-white shadow-lg transform scale-105"
+                : "text-muted-foreground hover:bg-gradient-to-r hover:from-primary/20 hover:to-accent/20 hover:text-foreground hover:scale-105 hover:shadow-md"
             )}
           >
-            <item.icon className="h-4 w-4 shrink-0" />
+            <div className={cn(
+              "absolute inset-0 bg-gradient-to-r from-primary/5 to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-200",
+              !isActive(item.url) && "group-hover:opacity-100"
+            )} />
+            <item.icon className={cn(
+              "h-5 w-5 shrink-0 relative z-10",
+              isActive(item.url) ? "text-white" : "group-hover:text-primary"
+            )} />
             {!collapsed && (
-              <span className="ml-3">{item.title}</span>
+              <span className="ml-3 relative z-10">{item.title}</span>
             )}
           </NavLink>
         ))}

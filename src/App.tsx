@@ -15,6 +15,7 @@ import Navbar from "./components/Navbar";
 import Sidebar from "./components/Sidebar";
 import Dashboard from "./components/Dashboard";
 import { LoadingSpinner } from "./components/LoadingSpinner";
+import { PageTransition } from "./components/PageTransition";
 
 const queryClient = new QueryClient();
 
@@ -25,15 +26,17 @@ const AuthenticatedApp = () => {
       <div className="flex">
         <Sidebar />
         <main className="flex-1">
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/funding" element={<Funding />} />
-            <Route path="/projects" element={<Projects />} />
-            <Route path="/expenses" element={<Expenses />} />
-            <Route path="/reports" element={<Reports />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <PageTransition>
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/funding" element={<Funding />} />
+              <Route path="/projects" element={<Projects />} />
+              <Route path="/expenses" element={<Expenses />} />
+              <Route path="/reports" element={<Reports />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </PageTransition>
         </main>
       </div>
     </div>
