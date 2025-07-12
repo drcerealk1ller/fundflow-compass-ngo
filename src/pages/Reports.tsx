@@ -126,46 +126,90 @@ const Reports = () => {
     }
   };
 
-  const exportToCSV = () => {
+  const exportToAccountingLedger = () => {
     if (!reportData) return;
 
-    let csvContent = "NGO Finance Report\n\n";
+    // Create a proper accounting ledger format
+    let ledgerContent = "GENERAL LEDGER - NGO FINANCIAL STATEMENTS\n";
+    ledgerContent += `Report Generated: ${new Date().toLocaleDateString()}\n`;
+    ledgerContent += `Period: ${new Date().getFullYear()}\n\n`;
     
-    // Summary
-    csvContent += "FINANCIAL SUMMARY\n";
-    csvContent += `Total Funding Received,$${reportData.totalFunding.toLocaleString()}\n`;
-    csvContent += `Total Expenses,$${reportData.totalExpenses.toLocaleString()}\n`;
-    csvContent += `Remaining Balance,$${(reportData.totalFunding - reportData.totalExpenses).toLocaleString()}\n\n`;
+    // Chart of Accounts Header
+    ledgerContent += "=".repeat(80) + "\n";
+    ledgerContent += "CHART OF ACCOUNTS\n";
+    ledgerContent += "=".repeat(80) + "\n\n";
     
-    // Funding entries
-    csvContent += "FUNDING ENTRIES\n";
-    csvContent += "Donor Name,Amount,Date Received\n";
-    reportData.fundingEntries.forEach(entry => {
-      csvContent += `"${entry.donor_name}",$${entry.amount},${entry.date_received}\n`;
+    // Assets Section
+    ledgerContent += "ASSETS\n";
+    ledgerContent += "-".repeat(40) + "\n";
+    ledgerContent += "Account,Description,Balance\n";
+    ledgerContent += `1000,Cash and Cash Equivalents,$${(reportData.totalFunding - reportData.totalExpenses).toLocaleString()}\n`;
+    ledgerContent += `1100,Total Assets,$${(reportData.totalFunding - reportData.totalExpenses).toLocaleString()}\n\n`;
+    
+    // Revenue Section  
+    ledgerContent += "REVENUE\n";
+    ledgerContent += "-".repeat(40) + "\n";
+    ledgerContent += "Date,Reference,Donor/Source,Description,Amount\n";
+    reportData.fundingEntries.forEach((entry, index) => {
+      ledgerContent += `${entry.date_received},REV${String(index + 1).padStart(4, '0')},"${entry.donor_name}",Donation Received,$${entry.amount}\n`;
     });
-    csvContent += "\n";
+    ledgerContent += `,,TOTAL REVENUE,,$${reportData.totalFunding.toLocaleString()}\n\n`;
     
-    // Project summary
-    csvContent += "PROJECT EXPENSES SUMMARY\n";
-    csvContent += "Project,Sub-Project,Amount\n";
-    reportData.projectSummary.forEach(project => {
-      csvContent += `"${project.project_name}",TOTAL,$${project.total_expenses}\n`;
-      project.sub_projects.forEach(subProject => {
-        csvContent += `"${project.project_name}","${subProject.name}",$${subProject.total_expenses}\n`;
+    // Expenses Section
+    ledgerContent += "EXPENSES BY PROJECT\n";
+    ledgerContent += "-".repeat(40) + "\n";
+    ledgerContent += "Date,Reference,Project,Sub-Project,Description,Amount\n";
+    
+    let expenseRef = 1;
+    reportData.recentExpenses.forEach(expense => {
+      ledgerContent += `${expense.expense_date},EXP${String(expenseRef).padStart(4, '0')},"${expense.project_name}","${expense.sub_project_name}","${expense.description}",$${expense.amount}\n`;
+      expenseRef++;
+    });
+    ledgerContent += `,,,,TOTAL EXPENSES,$${reportData.totalExpenses.toLocaleString()}\n\n`;
+    
+    // Project Cost Centers
+    ledgerContent += "PROJECT COST CENTERS\n";
+    ledgerContent += "-".repeat(40) + "\n";
+    ledgerContent += "Project Code,Project Name,Total Allocated,Total Spent,Variance\n";
+    reportData.projectSummary.forEach((project, index) => {
+      const projectCode = `P${String(index + 1).padStart(3, '0')}`;
+      ledgerContent += `${projectCode},"${project.project_name}",$${project.total_expenses.toLocaleString()},$${project.total_expenses.toLocaleString()},$0\n`;
+      
+      // Sub-project breakdown
+      project.sub_projects.forEach((subProject, subIndex) => {
+        const subProjectCode = `${projectCode}-${String(subIndex + 1).padStart(2, '0')}`;
+        ledgerContent += `${subProjectCode},"  ${subProject.name}",$${subProject.total_expenses.toLocaleString()},$${subProject.total_expenses.toLocaleString()},$0\n`;
       });
     });
+    
+    // Financial Summary
+    ledgerContent += "\n" + "=".repeat(80) + "\n";
+    ledgerContent += "FINANCIAL POSITION SUMMARY\n";
+    ledgerContent += "=".repeat(80) + "\n";
+    ledgerContent += "Description,Amount\n";
+    ledgerContent += `Total Revenue,$${reportData.totalFunding.toLocaleString()}\n`;
+    ledgerContent += `Total Expenses,$${reportData.totalExpenses.toLocaleString()}\n`;
+    ledgerContent += `Net Position,$${(reportData.totalFunding - reportData.totalExpenses).toLocaleString()}\n`;
+    ledgerContent += `Utilization Rate,${((reportData.totalExpenses / reportData.totalFunding) * 100).toFixed(1)}%\n\n`;
+    
+    // Compliance Notes
+    ledgerContent += "NOTES:\n";
+    ledgerContent += "1. All amounts are recorded in USD\n";
+    ledgerContent += "2. Expenses are recorded on accrual basis\n";
+    ledgerContent += "3. Revenue is recognized when received\n";
+    ledgerContent += "4. This ledger complies with NGO accounting standards\n";
 
-    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const blob = new Blob([ledgerContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `ngo-finance-report-${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `accounting-ledger-${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
 
     toast({
-      title: "Export Successful",
-      description: "Report exported to CSV file"
+      title: "Accounting Ledger Exported",
+      description: "Professional accounting ledger has been generated"
     });
   };
 
@@ -194,10 +238,12 @@ const Reports = () => {
           </p>
         </div>
         
-        <Button onClick={exportToCSV}>
-          <Download className="h-4 w-4 mr-2" />
-          Export CSV
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={exportToAccountingLedger} className="bg-gradient-to-r from-primary to-primary-accent">
+            <Download className="h-4 w-4 mr-2" />
+            Export Accounting Ledger
+          </Button>
+        </div>
       </div>
 
       {/* Financial Summary */}

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import {
   Home,
@@ -8,8 +8,11 @@ import {
   FileText,
   Settings,
   Menu,
-  X
+  X,
+  Users
 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -22,11 +25,36 @@ const sidebarItems = [
   { title: "Settings", url: "/settings", icon: Settings },
 ];
 
+const adminItems = [
+  { title: "User Management", url: "/user-management", icon: Users },
+];
+
 const Sidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
+  const [userRole, setUserRole] = useState<string>('staff');
   const location = useLocation();
+  const { user } = useAuth();
+
+  useEffect(() => {
+    const fetchUserRole = async () => {
+      if (user) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('user_id', user.id)
+          .single();
+        
+        if (data) {
+          setUserRole(data.role);
+        }
+      }
+    };
+
+    fetchUserRole();
+  }, [user]);
 
   const isActive = (path: string) => location.pathname === path;
+  const isAdmin = userRole === 'admin';
 
   return (
     <div className={cn(
@@ -75,6 +103,45 @@ const Sidebar = () => {
           </NavLink>
         ))}
       </nav>
+
+      {/* Admin Section */}
+      {isAdmin && (
+        <div className="border-t border-border/50">
+          {!collapsed && (
+            <div className="px-4 py-2">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Administration
+              </h3>
+            </div>
+          )}
+          <nav className="space-y-2 p-4 pt-2">
+            {adminItems.map((item) => (
+              <NavLink
+                key={item.title}
+                to={item.url}
+                className={cn(
+                  "flex items-center rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 group relative overflow-hidden",
+                  isActive(item.url)
+                    ? "bg-gradient-to-r from-rose-500 to-pink-500 text-white shadow-lg transform scale-105"
+                    : "text-muted-foreground hover:bg-gradient-to-r hover:from-rose-500/20 hover:to-pink-500/20 hover:text-foreground hover:scale-105 hover:shadow-md"
+                )}
+              >
+                <div className={cn(
+                  "absolute inset-0 bg-gradient-to-r from-rose-500/5 to-pink-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-200",
+                  !isActive(item.url) && "group-hover:opacity-100"
+                )} />
+                <item.icon className={cn(
+                  "h-5 w-5 shrink-0 relative z-10",
+                  isActive(item.url) ? "text-white" : "group-hover:text-rose-500"
+                )} />
+                {!collapsed && (
+                  <span className="ml-3 relative z-10">{item.title}</span>
+                )}
+              </NavLink>
+            ))}
+          </nav>
+        </div>
+      )}
     </div>
   );
 };
