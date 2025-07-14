@@ -11,6 +11,7 @@ import Expenses from "./pages/Expenses";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import UserManagement from "./pages/UserManagement";
+import Accounting from "./pages/Accounting";
 import NotFound from "./pages/NotFound";
 import Navbar from "./components/Navbar";
 import Sidebar from "./components/Sidebar";
@@ -35,8 +36,9 @@ const AuthenticatedApp = () => {
               <Route path="/expenses" element={<Expenses />} />
               <Route path="/reports" element={<Reports />} />
               <Route path="/settings" element={<Settings />} />
-              <Route path="/user-management" element={<UserManagement />} />
-              <Route path="*" element={<NotFound />} />
+            <Route path="/user-management" element={<UserManagement />} />
+            <Route path="/accounting" element={<Accounting />} />
+            <Route path="*" element={<NotFound />} />
             </Routes>
           </PageTransition>
         </main>
