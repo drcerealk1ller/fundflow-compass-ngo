@@ -115,18 +115,28 @@ export default function Accounting() {
   const fetchLedger = async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams();
-      if (selectedAccount) params.append('account_id', selectedAccount);
-      if (selectedPeriod) params.append('reporting_period_id', selectedPeriod);
-      if (startDate) params.append('start_date', startDate);
-      if (endDate) params.append('end_date', endDate);
+      const params: Record<string, string> = {};
+      if (selectedAccount) params.account_id = selectedAccount;
+      if (selectedPeriod) params.reporting_period_id = selectedPeriod;
+      if (startDate) params.start_date = startDate;
+      if (endDate) params.end_date = endDate;
 
-      const { data, error } = await supabase.functions.invoke('reports-ledger', {
-        body: null,
+      const queryString = new URLSearchParams(params).toString();
+      const fullUrl = `https://xnzgnnrpneyoonwvveno.supabase.co/functions/v1/reports-ledger?${queryString}`;
+      
+      const response = await fetch(fullUrl, {
         method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          'Content-Type': 'application/json',
+        }
       });
 
-      if (error) throw error;
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
 
       if (data?.success) {
         setLedgerData(data.data);
@@ -148,16 +158,26 @@ export default function Accounting() {
   const fetchBalanceSheet = async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams();
-      if (selectedPeriod) params.append('reporting_period_id', selectedPeriod);
-      if (endDate) params.append('as_of_date', endDate);
+      const params: Record<string, string> = {};
+      if (selectedPeriod) params.reporting_period_id = selectedPeriod;
+      if (endDate) params.as_of_date = endDate;
 
-      const { data, error } = await supabase.functions.invoke('reports-balance-sheet', {
-        body: null,
+      const queryString = new URLSearchParams(params).toString();
+      const fullUrl = `https://xnzgnnrpneyoonwvveno.supabase.co/functions/v1/reports-balance-sheet?${queryString}`;
+      
+      const response = await fetch(fullUrl, {
         method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          'Content-Type': 'application/json',
+        }
       });
 
-      if (error) throw error;
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
 
       if (data?.success) {
         setBalanceSheetData(data.data);
@@ -179,17 +199,27 @@ export default function Accounting() {
   const fetchIncomeStatement = async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams();
-      if (selectedPeriod) params.append('reporting_period_id', selectedPeriod);
-      if (startDate) params.append('start_date', startDate);
-      if (endDate) params.append('end_date', endDate);
+      const params: Record<string, string> = {};
+      if (selectedPeriod) params.reporting_period_id = selectedPeriod;
+      if (startDate) params.start_date = startDate;
+      if (endDate) params.end_date = endDate;
 
-      const { data, error } = await supabase.functions.invoke('reports-income-statement', {
-        body: null,
+      const queryString = new URLSearchParams(params).toString();
+      const fullUrl = `https://xnzgnnrpneyoonwvveno.supabase.co/functions/v1/reports-income-statement?${queryString}`;
+      
+      const response = await fetch(fullUrl, {
         method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          'Content-Type': 'application/json',
+        }
       });
 
-      if (error) throw error;
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
 
       if (data?.success) {
         setIncomeStatementData(data.data);
