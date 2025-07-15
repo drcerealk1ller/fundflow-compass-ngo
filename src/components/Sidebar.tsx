@@ -31,7 +31,7 @@ const adminItems = [
 ];
 
 const financeItems = [
-  { title: "Accounting", url: "/accounting", icon: Calculator },
+  
 ];
 
 const Sidebar = () => {

@@ -120,14 +120,19 @@ export type Database = {
           created_by: string
           description: string
           expense_date: string
+          fund_source_id: string | null
           id: string
           invoice_number: string | null
+          paid_from_account_id: string | null
+          payment_mode: string | null
           project_allocation_id: string | null
           sub_project_id: string
           tax_category: Database["public"]["Enums"]["tax_category"] | null
           tax_deductible: boolean | null
+          transaction_type: string | null
           updated_at: string
           vendor_name: string | null
+          voucher_reference: string | null
         }
         Insert: {
           account_id?: string | null
@@ -138,14 +143,19 @@ export type Database = {
           created_by: string
           description: string
           expense_date: string
+          fund_source_id?: string | null
           id?: string
           invoice_number?: string | null
+          paid_from_account_id?: string | null
+          payment_mode?: string | null
           project_allocation_id?: string | null
           sub_project_id: string
           tax_category?: Database["public"]["Enums"]["tax_category"] | null
           tax_deductible?: boolean | null
+          transaction_type?: string | null
           updated_at?: string
           vendor_name?: string | null
+          voucher_reference?: string | null
         }
         Update: {
           account_id?: string | null
@@ -156,19 +166,38 @@ export type Database = {
           created_by?: string
           description?: string
           expense_date?: string
+          fund_source_id?: string | null
           id?: string
           invoice_number?: string | null
+          paid_from_account_id?: string | null
+          payment_mode?: string | null
           project_allocation_id?: string | null
           sub_project_id?: string
           tax_category?: Database["public"]["Enums"]["tax_category"] | null
           tax_deductible?: boolean | null
+          transaction_type?: string | null
           updated_at?: string
           vendor_name?: string | null
+          voucher_reference?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "expenses_account_id_fkey"
             columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_fund_source_id_fkey"
+            columns: ["fund_source_id"]
+            isOneToOne: false
+            referencedRelation: "funding"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_paid_from_account_id_fkey"
+            columns: ["paid_from_account_id"]
             isOneToOne: false
             referencedRelation: "chart_of_accounts"
             referencedColumns: ["id"]

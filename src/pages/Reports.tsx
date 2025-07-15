@@ -1,9 +1,14 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Download, FileText, BarChart3 } from "lucide-react";
+import { Download, FileText, BarChart3, Calculator, Receipt, TrendingUp } from "lucide-react";
 
 interface ReportData {
   totalFunding: number;
@@ -31,14 +36,55 @@ interface ReportData {
   }>;
 }
 
+interface ChartOfAccount {
+  id: string;
+  code: string;
+  name: string;
+  type: string;
+}
+
+interface ReportingPeriod {
+  id: string;
+  name: string;
+  start_date: string;
+  end_date: string;
+}
+
 const Reports = () => {
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [accounts, setAccounts] = useState<ChartOfAccount[]>([]);
+  const [reportingPeriods, setReportingPeriods] = useState<ReportingPeriod[]>([]);
+  const [ledgerData, setLedgerData] = useState<any>(null);
+  const [balanceSheetData, setBalanceSheetData] = useState<any>(null);
+  const [incomeStatementData, setIncomeStatementData] = useState<any>(null);
+  
+  // Filters
+  const [selectedAccount, setSelectedAccount] = useState("");
+  const [selectedPeriod, setSelectedPeriod] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  
   const { toast } = useToast();
 
   useEffect(() => {
     fetchReportData();
+    fetchAccountsAndPeriods();
   }, []);
+
+  const fetchAccountsAndPeriods = async () => {
+    try {
+      const [accountsResult, periodsResult] = await Promise.all([
+        supabase.from('chart_of_accounts').select('*').order('code'),
+        supabase.from('reporting_periods').select('*').order('name')
+      ]);
+      
+      if (accountsResult.data) setAccounts(accountsResult.data);
+      if (periodsResult.data) setReportingPeriods(periodsResult.data);
+    } catch (error) {
+      console.error('Error fetching accounts and periods:', error);
+    }
+  };
 
   const fetchReportData = async () => {
     try {
@@ -213,6 +259,144 @@ const Reports = () => {
     });
   };
 
+  const fetchLedger = async () => {
+    setLoading(true);
+    try {
+      const params: Record<string, string> = {};
+      if (selectedAccount) params.account_id = selectedAccount;
+      if (selectedPeriod) params.reporting_period_id = selectedPeriod;
+      if (startDate) params.start_date = startDate;
+      if (endDate) params.end_date = endDate;
+
+      const queryString = new URLSearchParams(params).toString();
+      const fullUrl = `https://xnzgnnrpneyoonwvveno.supabase.co/functions/v1/reports-ledger?${queryString}`;
+      
+      const response = await fetch(fullUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data?.success) {
+        setLedgerData(data.data);
+        toast({
+          title: "Success",
+          description: "Ledger data fetched successfully"
+        });
+      } else {
+        throw new Error(data?.error || 'Failed to fetch ledger');
+      }
+    } catch (error) {
+      console.error('Error fetching ledger:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch ledger data",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchBalanceSheet = async () => {
+    setLoading(true);
+    try {
+      const params: Record<string, string> = {};
+      if (selectedPeriod) params.reporting_period_id = selectedPeriod;
+      if (endDate) params.as_of_date = endDate;
+
+      const queryString = new URLSearchParams(params).toString();
+      const fullUrl = `https://xnzgnnrpneyoonwvveno.supabase.co/functions/v1/reports-balance-sheet?${queryString}`;
+      
+      const response = await fetch(fullUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data?.success) {
+        setBalanceSheetData(data.data);
+        toast({
+          title: "Success",
+          description: "Balance sheet data fetched successfully"
+        });
+      } else {
+        throw new Error(data?.error || 'Failed to fetch balance sheet');
+      }
+    } catch (error) {
+      console.error('Error fetching balance sheet:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch balance sheet data",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchIncomeStatement = async () => {
+    setLoading(true);
+    try {
+      const params: Record<string, string> = {};
+      if (selectedPeriod) params.reporting_period_id = selectedPeriod;
+      if (startDate) params.start_date = startDate;
+      if (endDate) params.end_date = endDate;
+
+      const queryString = new URLSearchParams(params).toString();
+      const fullUrl = `https://xnzgnnrpneyoonwvveno.supabase.co/functions/v1/reports-income-statement?${queryString}`;
+      
+      const response = await fetch(fullUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data?.success) {
+        setIncomeStatementData(data.data);
+        toast({
+          title: "Success",
+          description: "Income statement data fetched successfully"
+        });
+      } else {
+        throw new Error(data?.error || 'Failed to fetch income statement');
+      }
+    } catch (error) {
+      console.error('Error fetching income statement:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch income statement data",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -232,9 +416,9 @@ const Reports = () => {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Reports & Ledger</h2>
+          <h2 className="text-3xl font-bold tracking-tight">Financial Reports & Accounting</h2>
           <p className="text-muted-foreground">
-            Comprehensive financial reports and data exports
+            Comprehensive financial reports, accounting ledgers, and data exports
           </p>
         </div>
         
@@ -245,6 +429,16 @@ const Reports = () => {
           </Button>
         </div>
       </div>
+
+      <Tabs defaultValue="overview" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="ledger">General Ledger</TabsTrigger>
+          <TabsTrigger value="balance">Balance Sheet</TabsTrigger>
+          <TabsTrigger value="income">Income Statement</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-6">
 
       {/* Financial Summary */}
       <div className="grid gap-4 md:grid-cols-3">
@@ -343,6 +537,290 @@ const Reports = () => {
           </div>
         </CardContent>
       </Card>
+    </TabsContent>
+
+    <TabsContent value="ledger" className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Receipt className="h-5 w-5" />
+            General Ledger
+          </CardTitle>
+          <CardDescription>
+            Detailed transaction records by account
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="space-y-2">
+              <Label>Account</Label>
+              <Select value={selectedAccount} onValueChange={setSelectedAccount}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All accounts" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All accounts</SelectItem>
+                  {accounts.map((account) => (
+                    <SelectItem key={account.id} value={account.id}>
+                      {account.code} - {account.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Period</Label>
+              <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select period" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All periods</SelectItem>
+                  {reportingPeriods.map((period) => (
+                    <SelectItem key={period.id} value={period.id}>
+                      {period.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Start Date</Label>
+              <Input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>End Date</Label>
+              <Input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
+            </div>
+          </div>
+          <Button onClick={fetchLedger} disabled={loading}>
+            <Calculator className="h-4 w-4 mr-2" />
+            Generate Ledger
+          </Button>
+          
+          {ledgerData && (
+            <div className="space-y-4">
+              <h4 className="font-semibold">Ledger Results</h4>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Account</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Debit</TableHead>
+                    <TableHead>Credit</TableHead>
+                    <TableHead>Balance</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {ledgerData.transactions?.map((transaction: any, index: number) => (
+                    <TableRow key={index}>
+                      <TableCell>{new Date(transaction.date).toLocaleDateString()}</TableCell>
+                      <TableCell>{transaction.account_name}</TableCell>
+                      <TableCell>{transaction.description}</TableCell>
+                      <TableCell>{transaction.debit ? formatCurrency(transaction.debit) : '-'}</TableCell>
+                      <TableCell>{transaction.credit ? formatCurrency(transaction.credit) : '-'}</TableCell>
+                      <TableCell>{formatCurrency(transaction.balance)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </TabsContent>
+
+    <TabsContent value="balance" className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BarChart3 className="h-5 w-5" />
+            Balance Sheet
+          </CardTitle>
+          <CardDescription>
+            Financial position at a specific point in time
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Reporting Period</Label>
+              <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select period" />
+                </SelectTrigger>
+                <SelectContent>
+                  {reportingPeriods.map((period) => (
+                    <SelectItem key={period.id} value={period.id}>
+                      {period.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>As of Date</Label>
+              <Input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
+            </div>
+          </div>
+          <Button onClick={fetchBalanceSheet} disabled={loading}>
+            <TrendingUp className="h-4 w-4 mr-2" />
+            Generate Balance Sheet
+          </Button>
+          
+          {balanceSheetData && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h4 className="font-semibold mb-2">Assets</h4>
+                <div className="space-y-2">
+                  {balanceSheetData.assets?.map((asset: any, index: number) => (
+                    <div key={index} className="flex justify-between">
+                      <span>{asset.account_name}</span>
+                      <span>{formatCurrency(asset.balance)}</span>
+                    </div>
+                  ))}
+                  <div className="border-t pt-2 font-semibold flex justify-between">
+                    <span>Total Assets</span>
+                    <span>{formatCurrency(balanceSheetData.total_assets || 0)}</span>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <h4 className="font-semibold mb-2">Liabilities & Equity</h4>
+                <div className="space-y-2">
+                  {balanceSheetData.liabilities?.map((liability: any, index: number) => (
+                    <div key={index} className="flex justify-between">
+                      <span>{liability.account_name}</span>
+                      <span>{formatCurrency(liability.balance)}</span>
+                    </div>
+                  ))}
+                  {balanceSheetData.equity?.map((equity: any, index: number) => (
+                    <div key={index} className="flex justify-between">
+                      <span>{equity.account_name}</span>
+                      <span>{formatCurrency(equity.balance)}</span>
+                    </div>
+                  ))}
+                  <div className="border-t pt-2 font-semibold flex justify-between">
+                    <span>Total Liabilities & Equity</span>
+                    <span>{formatCurrency((balanceSheetData.total_liabilities || 0) + (balanceSheetData.total_equity || 0))}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </TabsContent>
+
+    <TabsContent value="income" className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5" />
+            Income Statement
+          </CardTitle>
+          <CardDescription>
+            Revenue and expenses for a specific period
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label>Reporting Period</Label>
+              <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select period" />
+                </SelectTrigger>
+                <SelectContent>
+                  {reportingPeriods.map((period) => (
+                    <SelectItem key={period.id} value={period.id}>
+                      {period.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Start Date</Label>
+              <Input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>End Date</Label>
+              <Input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
+            </div>
+          </div>
+          <Button onClick={fetchIncomeStatement} disabled={loading}>
+            <BarChart3 className="h-4 w-4 mr-2" />
+            Generate Income Statement
+          </Button>
+          
+          {incomeStatementData && (
+            <div className="space-y-6">
+              <div>
+                <h4 className="font-semibold mb-2">Revenue</h4>
+                <div className="space-y-2">
+                  {incomeStatementData.revenue?.map((revenue: any, index: number) => (
+                    <div key={index} className="flex justify-between">
+                      <span>{revenue.account_name}</span>
+                      <span>{formatCurrency(revenue.amount)}</span>
+                    </div>
+                  ))}
+                  <div className="border-t pt-2 font-semibold flex justify-between">
+                    <span>Total Revenue</span>
+                    <span>{formatCurrency(incomeStatementData.total_revenue || 0)}</span>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <h4 className="font-semibold mb-2">Expenses</h4>
+                <div className="space-y-2">
+                  {incomeStatementData.expenses?.map((expense: any, index: number) => (
+                    <div key={index} className="flex justify-between">
+                      <span>{expense.account_name}</span>
+                      <span>{formatCurrency(expense.amount)}</span>
+                    </div>
+                  ))}
+                  <div className="border-t pt-2 font-semibold flex justify-between">
+                    <span>Total Expenses</span>
+                    <span>{formatCurrency(incomeStatementData.total_expenses || 0)}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="border-t pt-4">
+                <div className="flex justify-between font-bold text-lg">
+                  <span>Net Income</span>
+                  <span className={(incomeStatementData.net_income || 0) >= 0 ? 'text-green-600' : 'text-red-600'}>
+                    {formatCurrency(incomeStatementData.net_income || 0)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </TabsContent>
+  </Tabs>
     </div>
   );
 };
